@@ -1,10 +1,10 @@
 ---
-- hosts: all
+- hosts: nodes
   become: true
   vars:
     node_ip: "{{ hostvars[inventory_hostname]['ansible_default_ipv4']['address'] }}"
     user: ansibleuser
-    
+
   tasks:
     - name: Install packages that allow apt to be used over HTTPS
       apt:

@@ -3,6 +3,7 @@
   become: true
   vars:
     node_ip: "{{ hostvars[inventory_hostname]['ansible_default_ipv4']['address'] }}"
+    node_subnet: 10.181.0.0/16
     user: ansibleuser
 
   tasks:
@@ -89,7 +90,7 @@
       state: restarted
 
   - name: Initialize the Kubernetes cluster using kubeadm
-    command: kubeadm init --apiserver-advertise-address={{ node_ip }} --apiserver-cert-extra-sans={{ node_ip }}  --node-name k8s-master --pod-network-cidr=10.181.0.0/16
+    command: kubeadm init --apiserver-advertise-address={{ node_ip }} --apiserver-cert-extra-sans={{ node_ip }}  --node-name k8s-master --pod-network-cidr={{ node_subnet}}
 
   - name: "Setup kubeconfig for {{ user }} user"
     command: "{{ item }}"
