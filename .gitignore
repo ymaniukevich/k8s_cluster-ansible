@@ -1,3 +1,4 @@
 join-command
 ansibleuser.pem
 *.retry
+ym.pem

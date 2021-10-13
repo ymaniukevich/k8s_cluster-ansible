@@ -4,9 +4,13 @@
   vars:
     node_ip: "{{ hostvars[inventory_hostname]['ansible_default_ipv4']['address'] }}"
     node_subnet: 10.181.0.0/16
-    user: ansibleuser
+    user: ubuntu
 
   tasks:
+  - name: Run the equivalent of "apt-get update" as a separate step
+    apt:
+      update_cache: yes
+
   - name: Install packages that allow apt to be used over HTTPS
     apt:
       name: "{{ packages }}"
@@ -19,17 +23,17 @@
       - curl
       - gnupg-agent
       - software-properties-common
-
+ 
   - name: Add an apt signing key for Docker
     apt_key:
       url: https://download.docker.com/linux/ubuntu/gpg
       state: present
-
+ 
   - name: Add apt repository for stable version
     apt_repository:
       repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable
       state: present
-
+ 
   - name: Install docker and its dependecies
     apt: 
       name: "{{ packages }}"
@@ -42,12 +46,12 @@
       - containerd.io
     notify:
       - docker status
-
+ 
   - name: "Add {{ user }} user to docker group"
     user:
       name: "{{ user }}"
       group: docker
-
+ 
   - name: Remove swapfile from /etc/fstab
     mount:
       name: "{{ item }}"
@@ -56,22 +60,22 @@
     with_items:
       - swap
       - none
-
+ 
   - name: Disable swap
     command: swapoff -a
     when: ansible_swaptotal_mb > 0
-
+ 
   - name: Add an apt signing key for Kubernetes
     apt_key:
       url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
       state: present
-
+ 
   - name: Adding apt repository for Kubernetes
     apt_repository:
       repo: deb https://apt.kubernetes.io/ kubernetes-xenial main
       state: present
       filename: kubernetes.list
-
+ 
   - name: Install Kubernetes binaries
     apt: 
       name: "{{ packages }}"
@@ -82,16 +86,17 @@
         - kubelet 
         - kubeadm 
         - kubectl
-
+ 
   - name: Restart kubelet
     service:
       name: kubelet
       daemon_reload: yes
       state: restarted
-
+ #https://stackoverflow.com/questions/52119985/kubeadm-init-shows-kubelet-isnt-running-or-healthy issue with Ubuntu 18.04
   - name: Initialize the Kubernetes cluster using kubeadm
     command: kubeadm init --apiserver-advertise-address={{ node_ip }} --apiserver-cert-extra-sans={{ node_ip }}  --node-name k8s-master --pod-network-cidr={{ node_subnet}}
-
+    become: true
+    
   - name: "Setup kubeconfig for {{ user }} user"
     command: "{{ item }}"
     with_items:
@@ -100,8 +105,8 @@
     - "chown {{ user }}:{{ user }} /home/{{ user }}/.kube/config"
 
   - name: Install calico pod network
-    become: false
     command: kubectl apply -f https://docs.projectcalico.org/v3.9/manifests/calico.yaml
+    become: true
     
   - name: Generate join command
     command: kubeadm token create --print-join-command
